@@ -2,7 +2,6 @@ package compressor_test
 
 import (
 	"bytes"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,22 +9,21 @@ import (
 	"github.com/onflow/flow-go/network/compressor"
 )
 
-// TestGzipRoundTrip evaluates that
+// TestZstdRoundTrip evaluates that
 // 1) reading what has been written by compressor yields in same result
 // 2) data is compressed when written.
-func TestGzipRoundTrip(t *testing.T) {
+func TestZstdRoundTrip(t *testing.T) {
 	text := "hello world, hello world!"
 	textBytes := []byte(text)
 	textBytesLen := len(textBytes)
 	buf := new(bytes.Buffer)
 
-	gzipComp := compressor.GzipStreamCompressor{}
+	zstdComp := compressor.ZstdStreamCompressor{}
 
-	w, err := gzipComp.NewWriter(buf)
+	w, err := zstdComp.NewWriter(buf)
 	require.NoError(t, err)
 
 	// testing write
-	//
 	n, err := w.Write(textBytes)
 	require.NoError(t, err)
 	// written bytes should match original data
@@ -35,14 +33,13 @@ func TestGzipRoundTrip(t *testing.T) {
 	require.NoError(t, w.Close())
 
 	// testing read
-	//
-	r, err := gzipComp.NewReader(buf)
+	r, err := zstdComp.NewReader(buf)
 	require.NoError(t, err)
 
 	b := make([]byte, textBytesLen)
 	n, err = r.Read(b)
-	// we read the entire buffer on reader, so it should return an EOF at the end
-	require.ErrorIs(t, err, io.EOF)
+	// we read the entire buffer on reader, so it should not return an error
+	require.NoError(t, err)
 	// we should read same number of bytes as we've written
 	require.Equal(t, n, textBytesLen)
 	// we should read what we have written

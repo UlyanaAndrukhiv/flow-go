@@ -144,6 +144,24 @@ func TestCreateStream_WithPreferredGzipUnicast(t *testing.T) {
 		protocols.FlowGzipProtocolId(sporkId))
 }
 
+// TestCreateStream_WithPreferredZstdUnicast evaluates correctness of creating zstd-compressed tcp unicast streams between two libp2p nodes.
+func TestCreateStream_WithPreferredZstdUnicast(t *testing.T) {
+	sporkId := unittest.IdentifierFixture()
+	testCreateStream(t,
+		sporkId,
+		[]protocols.ProtocolName{protocols.ZstdCompressionUnicast},
+		protocols.FlowZstdProtocolId(sporkId))
+}
+
+// TestCreateStream_WithPreferredLz4Unicast evaluates correctness of creating lz4-compressed tcp unicast streams between two libp2p nodes.
+func TestCreateStream_WithPreferredLz4Unicast(t *testing.T) {
+	sporkId := unittest.IdentifierFixture()
+	testCreateStream(t,
+		sporkId,
+		[]protocols.ProtocolName{protocols.Lz4CompressionUnicast},
+		protocols.FlowLz4ProtocolId(sporkId))
+}
+
 // testCreateStreams checks if a new streams of "preferred" type is created each time when CreateStream is called and an existing stream is not
 // reused. The "preferred" stream type is the one with the largest index in `unicasts` list.
 // To check that the streams are of "preferred" type, it evaluates the protocol id of established stream against the input `protocolID`.

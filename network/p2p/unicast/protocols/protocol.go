@@ -28,6 +28,12 @@ const (
 
 	// FlowLibP2PProtocolGzipCompressedOneToOne represents the protocol id for compressed streams under gzip compressor.
 	FlowLibP2PProtocolGzipCompressedOneToOne = FlowLibP2POneToOneProtocolIDPrefix + "/gzip/"
+
+	// FlowLibP2PProtocolZstdCompressedOneToOne represents the protocol id for compressed streams under zstd compressor.
+	FlowLibP2PProtocolZstdCompressedOneToOne = FlowLibP2POneToOneProtocolIDPrefix + "/zstd/"
+
+	// FlowLibP2PProtocolLz4CompressedOneToOne represents the protocol id for compressed streams under lz4 compressor.
+	FlowLibP2PProtocolLz4CompressedOneToOne = FlowLibP2POneToOneProtocolIDPrefix + "/lz4/"
 )
 
 // IsFlowProtocolStream returns true if the libp2p stream is for a Flow protocol
@@ -68,6 +74,14 @@ func ToProtocolFactory(name ProtocolName) (ProtocolFactory, error) {
 	case GzipCompressionUnicast:
 		return func(logger zerolog.Logger, sporkId flow.Identifier, handler libp2pnet.StreamHandler) Protocol {
 			return NewGzipCompressedUnicast(logger, sporkId, handler)
+		}, nil
+	case ZstdCompressionUnicast:
+		return func(logger zerolog.Logger, sporkId flow.Identifier, handler libp2pnet.StreamHandler) Protocol {
+			return NewZstdCompressedUnicast(logger, sporkId, handler)
+		}, nil
+	case Lz4CompressionUnicast:
+		return func(logger zerolog.Logger, sporkId flow.Identifier, handler libp2pnet.StreamHandler) Protocol {
+			return NewLz4CompressedUnicast(logger, sporkId, handler)
 		}, nil
 	default:
 		return nil, fmt.Errorf("unknown unicast protocol name: %s", name)
