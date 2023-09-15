@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -422,6 +423,14 @@ func (m *Middleware) SendDirect(msg *network.OutgoingMessageScope) error {
 	bufw := bufio.NewWriter(stream)
 	writer := ggio.NewDelimitedWriter(bufw)
 
+	// temporary helpers
+	// generated 2 unique bytes for every message to identify message
+	// cause were observed messages with the same size and the same payload time one after another
+	uniqueByte1 := generateOneByteUUID()
+	uniqueByte2 := generateOneByteUUID()
+	fmt.Println(fmt.Sprintf("Sent message: UUID %v%v, size %d, payload type %v, time %d", uniqueByte1, uniqueByte2, msg.Size(), msg.PayloadType(), time.Now().UnixMilli()))
+	msg.Msg.Payload = append(msg.Msg.Payload, uniqueByte1)
+	msg.Msg.Payload = append(msg.Msg.Payload, uniqueByte2)
 	err = writer.WriteMsg(msg.Proto())
 	if err != nil {
 		return fmt.Errorf("failed to send message to %s: %w", msg.TargetIds()[0], err)
@@ -436,6 +445,14 @@ func (m *Middleware) SendDirect(msg *network.OutgoingMessageScope) error {
 	success = true
 
 	return nil
+}
+
+// TODO: need to be removed
+// generate a random byte value
+func generateOneByteUUID() byte {
+	source := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(source)
+	return byte(r.Intn(256))
 }
 
 // handleIncomingStream handles an incoming stream from a remote peer
@@ -498,7 +515,25 @@ func (m *Middleware) handleIncomingStream(s libp2pnetwork.Stream) {
 		// Note: message fields must not be trusted until explicitly validated
 		var msg message.Message
 		// read the next message (blocking call)
+
+		// before provides message deeper need to remove externally added bytes, which are temporary helpers for
+		// checking compression time
+		var uniqueByte1 byte
+		var uniqueByte2 byte
+		var timeRead int64
+
 		err = r.ReadMsg(&msg)
+		timeRead = time.Now().UnixMilli()
+
+		if len(msg.Payload) > 0 {
+			newLen := len(msg.Payload) - 2
+			uniqueByte2 = msg.Payload[len(msg.Payload)-1]
+			uniqueByte1 = msg.Payload[len(msg.Payload)-2]
+			msg.Payload = msg.Payload[:newLen]
+			fmt.Println(fmt.Sprintf("Read message: UUID %v%v, size %d, time %v",
+				uniqueByte1, uniqueByte2, msg.Size(), timeRead))
+		}
+
 		if err != nil {
 			if err == io.EOF {
 				break

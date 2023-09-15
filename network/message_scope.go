@@ -92,8 +92,9 @@ type OutgoingMessageScope struct {
 	channelId channels.Channel                  // the channel ID.
 	payload   interface{}                       // the payload to be sent.
 	encoder   func(interface{}) ([]byte, error) // the encoder to encode the payload.
-	msg       *message.Message                  // raw proto message sent on wire.
-	protocol  message.ProtocolType              // the type of protocol used to send the message.
+	//TODO: need to be reverted back, temporary helpers
+	Msg      *message.Message     // raw proto message sent on wire.
+	protocol message.ProtocolType // the type of protocol used to send the message.
 }
 
 // NewOutgoingScope creates a new outgoing message scope.
@@ -132,16 +133,24 @@ func NewOutgoingScope(
 	if err != nil {
 		return nil, fmt.Errorf("could not build message: %w", err)
 	}
-	scope.msg = msg
+	scope.Msg = msg
 	return scope, nil
 }
+
+//func generateOneByteUUID() byte {
+//	source := rand.NewSource(time.Now().UnixNano())
+//	r := rand.New(source)
+//
+//	// Generate a random byte value
+//	return byte(r.Intn(256))
+//}
 
 func (o OutgoingMessageScope) TargetIds() flow.IdentifierList {
 	return o.targetIds
 }
 
 func (o OutgoingMessageScope) Size() int {
-	return o.msg.Size()
+	return o.Msg.Size()
 }
 
 func (o OutgoingMessageScope) PayloadType() string {
@@ -173,7 +182,7 @@ func (o OutgoingMessageScope) buildMessage() (*message.Message, error) {
 }
 
 func (o OutgoingMessageScope) Proto() *message.Message {
-	return o.msg
+	return o.Msg
 }
 
 // EventId computes the event ID for a given channel and payload (i.e., the hash of the payload and channel).
