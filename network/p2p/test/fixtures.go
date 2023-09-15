@@ -45,36 +45,36 @@ import (
 )
 
 // NetworkingKeyFixtures is a test helper that generates a ECDSA flow key pair.
-func NetworkingKeyFixtures(t *testing.T) crypto.PrivateKey {
+func NetworkingKeyFixtures(tb testing.TB) crypto.PrivateKey {
 	seed := unittest.SeedFixture(48)
 	key, err := crypto.GeneratePrivateKey(crypto.ECDSASecp256k1, seed)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return key
 }
 
 // NodeFixture is a test fixture that creates a single libp2p node with the given key, spork id, and options.
 // It returns the node and its identity.
 func NodeFixture(
-	t *testing.T,
+	tb testing.TB,
 	sporkID flow.Identifier,
 	dhtPrefix string,
 	idProvider module.IdentityProvider,
 	opts ...NodeFixtureParameterOption,
 ) (p2p.LibP2PNode, flow.Identity) {
 	defaultFlowConfig, err := config.DefaultConfig()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	logger := unittest.Logger().Level(zerolog.WarnLevel)
-	require.NotNil(t, idProvider)
+	require.NotNil(tb, idProvider)
 	connectionGater := NewConnectionGater(idProvider, func(p peer.ID) error {
 		return nil
 	})
-	require.NotNil(t, connectionGater)
+	require.NotNil(tb, connectionGater)
 	parameters := &NodeFixtureParameters{
 		NetworkingType:         flownet.PrivateNetwork,
 		HandlerFunc:            func(network.Stream) {},
 		Unicasts:               nil,
-		Key:                    NetworkingKeyFixtures(t),
+		Key:                    NetworkingKeyFixtures(tb),
 		Address:                unittest.DefaultAddress,
 		Logger:                 logger,
 		Role:                   flow.RoleCollection,
@@ -103,7 +103,7 @@ func NodeFixture(
 	logger = parameters.Logger.With().Hex("node_id", logging.ID(identity.NodeID)).Logger()
 
 	connManager, err := connection.NewConnManager(logger, parameters.MetricsCfg.Metrics, &defaultFlowConfig.NetworkConfig.ConnectionManagerConfig)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	builder := p2pbuilder.NewNodeBuilder(
 		logger,
@@ -168,16 +168,16 @@ func NodeFixture(
 	builder.SetGossipSubScoreTracerInterval(parameters.GossipSubPeerScoreTracerInterval)
 
 	n, err := builder.Build()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	if parameters.HandlerFunc != nil {
 		err = n.WithDefaultUnicastProtocol(parameters.HandlerFunc, parameters.Unicasts)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 	}
 
 	// get the actual IP and port that have been assigned by the subsystem
 	ip, port, err := n.GetIPPort()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	identity.Address = ip + ":" + port
 
 	if parameters.PeerProvider != nil {
@@ -416,7 +416,7 @@ func NodesFixture(t *testing.T, sporkID flow.Identifier, dhtPrefix string, count
 
 // StartNodes start all nodes in the input slice using the provided context, timing out if nodes are
 // not all Ready() before duration expires
-func StartNodes(t *testing.T, ctx irrecoverable.SignalerContext, nodes []p2p.LibP2PNode, timeout time.Duration) {
+func StartNodes(tb testing.TB, ctx irrecoverable.SignalerContext, nodes []p2p.LibP2PNode, timeout time.Duration) {
 	rdas := make([]module.ReadyDoneAware, 0, len(nodes))
 	for _, node := range nodes {
 		node.Start(ctx)
@@ -428,7 +428,7 @@ func StartNodes(t *testing.T, ctx irrecoverable.SignalerContext, nodes []p2p.Lib
 			rdas = append(rdas, peerManager)
 		}
 	}
-	unittest.RequireComponentsReadyBefore(t, timeout, rdas...)
+	unittest.RequireComponentsReadyBefore(tb, timeout, rdas...)
 }
 
 // StartNode start a single node using the provided context, timing out if nodes are not all Ready()
@@ -440,10 +440,10 @@ func StartNode(t *testing.T, ctx irrecoverable.SignalerContext, node p2p.LibP2PN
 
 // StopNodes stops all nodes in the input slice using the provided cancel func, timing out if nodes are
 // not all Done() before duration expires
-func StopNodes(t *testing.T, nodes []p2p.LibP2PNode, cancel context.CancelFunc, timeout time.Duration) {
+func StopNodes(tb testing.TB, nodes []p2p.LibP2PNode, cancel context.CancelFunc, timeout time.Duration) {
 	cancel()
 	for _, node := range nodes {
-		unittest.RequireComponentsDoneBefore(t, timeout, node)
+		unittest.RequireComponentsDoneBefore(tb, timeout, node)
 	}
 }
 
@@ -455,27 +455,27 @@ func StopNode(t *testing.T, node p2p.LibP2PNode, cancel context.CancelFunc, time
 }
 
 // StreamHandlerFixture returns a stream handler that writes the received message to the given channel.
-func StreamHandlerFixture(t *testing.T) (func(s network.Stream), chan string) {
+func StreamHandlerFixture(tb testing.TB) (func(s network.Stream), chan string) {
 	ch := make(chan string, 1) // channel to receive messages
 
 	return func(s network.Stream) {
 		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 		str, err := rw.ReadString('\n')
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		ch <- str
 	}, ch
 }
 
 // LetNodesDiscoverEachOther connects all nodes to each other on the pubsub mesh.
-func LetNodesDiscoverEachOther(t *testing.T, ctx context.Context, nodes []p2p.LibP2PNode, ids flow.IdentityList) {
+func LetNodesDiscoverEachOther(tb testing.TB, ctx context.Context, nodes []p2p.LibP2PNode, ids flow.IdentityList) {
 	for _, node := range nodes {
 		for i, other := range nodes {
 			if node == other {
 				continue
 			}
 			otherPInfo, err := utils.PeerAddressInfo(*ids[i])
-			require.NoError(t, err)
-			require.NoError(t, node.AddPeer(ctx, otherPInfo))
+			require.NoError(tb, err)
+			require.NoError(tb, node.AddPeer(ctx, otherPInfo))
 		}
 	}
 }

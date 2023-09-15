@@ -267,7 +267,7 @@ func EnsureNotConnected(t *testing.T, ctx context.Context, from []p2p.LibP2PNode
 // It fails the test if any of the nodes does not receive the message from the other nodes.
 // The "inbounds" parameter specifies the inbound channel of the nodes on which the messages are received.
 // The "messageFactory" parameter specifies the function that creates unique messages to be sent.
-func EnsureMessageExchangeOverUnicast(t *testing.T, ctx context.Context, nodes []p2p.LibP2PNode, inbounds []chan string, messageFactory func() string) {
+func EnsureMessageExchangeOverUnicast(tb testing.TB, ctx context.Context, nodes []p2p.LibP2PNode, inbounds []chan string, messageFactory func() string) {
 	for _, this := range nodes {
 		msg := messageFactory()
 
@@ -277,13 +277,13 @@ func EnsureMessageExchangeOverUnicast(t *testing.T, ctx context.Context, nodes [
 				continue
 			}
 			s, err := this.CreateStream(ctx, other.Host().ID())
-			require.NoError(t, err)
+			require.NoError(tb, err)
 			rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 			_, err = rw.WriteString(msg)
-			require.NoError(t, err)
+			require.NoError(tb, err)
 
 			// Flush the stream
-			require.NoError(t, rw.Flush())
+			require.NoError(tb, rw.Flush())
 		}
 
 		// wait for the message to be received by all other nodes
@@ -294,9 +294,9 @@ func EnsureMessageExchangeOverUnicast(t *testing.T, ctx context.Context, nodes [
 
 			select {
 			case rcv := <-inbounds[i]:
-				require.Equal(t, msg, rcv)
+				require.Equal(tb, msg, rcv)
 			case <-time.After(3 * time.Second):
-				require.Fail(t, fmt.Sprintf("did not receive message from node %d", i))
+				require.Fail(tb, fmt.Sprintf("did not receive message from node %d", i))
 			}
 		}
 	}
@@ -361,10 +361,10 @@ func EnsureStreamCreation(t *testing.T, ctx context.Context, from []p2p.LibP2PNo
 }
 
 // LongStringMessageFactoryFixture returns a function that creates a long unique string message.
-func LongStringMessageFactoryFixture(t *testing.T) func() string {
+func LongStringMessageFactoryFixture(tb testing.TB) func() string {
 	return func() string {
 		msg := "this is an intentionally long MESSAGE to be bigger than buffer size of most of stream compressors"
-		require.Greater(t, len(msg), 10, "we must stress test with longer than 10 bytes messages")
+		require.Greater(tb, len(msg), 10, "we must stress test with longer than 10 bytes messages")
 		return fmt.Sprintf("%s %d \n", msg, time.Now().UnixNano()) // add timestamp to make sure we don't send the same message twice
 	}
 }

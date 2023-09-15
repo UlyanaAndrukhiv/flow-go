@@ -8,7 +8,7 @@ import (
 // MockSignalerContext is a SignalerContext which will immediately fail a test if an error is thrown.
 type MockSignalerContext struct {
 	context.Context
-	t *testing.T
+	tb testing.TB
 }
 
 var _ SignalerContext = &MockSignalerContext{}
@@ -16,13 +16,13 @@ var _ SignalerContext = &MockSignalerContext{}
 func (m MockSignalerContext) sealed() {}
 
 func (m MockSignalerContext) Throw(err error) {
-	m.t.Fatalf("mock signaler context received error: %v", err)
+	m.tb.Fatalf("mock signaler context received error: %v", err)
 }
 
-func NewMockSignalerContext(t *testing.T, ctx context.Context) *MockSignalerContext {
+func NewMockSignalerContext(tb testing.TB, ctx context.Context) *MockSignalerContext {
 	return &MockSignalerContext{
 		Context: ctx,
-		t:       t,
+		tb:      tb,
 	}
 }
 
